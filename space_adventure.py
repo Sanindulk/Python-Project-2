@@ -5,6 +5,7 @@ import os
 
 # Initialize pygame
 pygame.init()
+pygame.mixer.init()  # Initialize sound mixer
 
 # Screen dimensions
 SCREEN_WIDTH = 800
@@ -28,6 +29,16 @@ def load_image(name):
         print(f"Cannot load image: {image_path}")
         print(e)
         return pygame.Surface((30, 30))
+
+# Load sounds
+shoot_sound = pygame.mixer.Sound(os.path.join('assets', 'sounds', 'shoot.wav'))
+explosion_sound = pygame.mixer.Sound(os.path.join('assets', 'sounds', 'explosion.wav'))
+powerup_sound = pygame.mixer.Sound(os.path.join('assets', 'sounds', 'powerup.wav'))
+
+# Set sound volume
+shoot_sound.set_volume(0.4)
+explosion_sound.set_volume(0.6)
+powerup_sound.set_volume(0.7)
 
 # Game settings
 FPS = 60
@@ -94,6 +105,7 @@ class Player(pygame.sprite.Sprite):
 
     def shoot(self):
         if not self.hidden:
+            shoot_sound.play()  # Play shoot sound
             if self.power_level == 1:
                 bullet = Bullet(self.rect.centerx, self.rect.top)
                 all_sprites.add(bullet)
@@ -135,11 +147,13 @@ class Enemy(pygame.sprite.Sprite):
             self.rect.x = random.randrange(0, SCREEN_WIDTH - self.rect.width)
             self.rect.y = random.randrange(-100, -40)
             self.speedy = random.randrange(1, 8)
+            self.speedx = random.randrange(-3, 3)  # Reset speedx when enemy goes off bottom
 
         if self.rect.left < -25 or self.rect.right > SCREEN_WIDTH + 25:
             self.rect.x = random.randrange(0, SCREEN_WIDTH - self.rect.width)
             self.rect.y = random.randrange(-100, -40)
             self.speedy = random.randrange(1, 8)
+            self.speedx = random.randrange(-3, 3)  # Reset speedx when enemy goes off sides
 
 # Bullet class
 class Bullet(pygame.sprite.Sprite):
@@ -179,6 +193,9 @@ class Explosion(pygame.sprite.Sprite):
         self.size = size
         self.images = explosion_imgs
         self.image = self.images[0]
+        # Scale the explosion images based on the size parameter
+        if size != 30:  # 30 is the default/normal size, don't scale if it's already that size
+            self.image = pygame.transform.scale(self.image, (size, size))
         self.rect = self.image.get_rect()
         self.rect.center = center
         self.frame = 0
@@ -190,10 +207,12 @@ class Explosion(pygame.sprite.Sprite):
         if now - self.last_update > self.frame_rate:
             self.last_update = now
             self.frame += 1
-            if self.frame >= 5:
+            if self.frame >= len(self.images):  # Use length of images list instead of hardcoded value
                 self.kill()
-            elif self.frame < 5:
+            elif self.frame < len(self.images):  # Use length of images list
                 self.image = self.images[self.frame]
+                if self.size != 30:  # Scale only if not default size
+                    self.image = pygame.transform.scale(self.image, (self.size, self.size))
                 old_center = self.rect.center
                 self.rect = self.image.get_rect()
                 self.rect.center = old_center
@@ -273,6 +292,7 @@ def main_game():
         # Check bullet-enemy collisions
         hits = pygame.sprite.groupcollide(enemies, bullets, True, True)  # Changed False to True so enemies are destroyed when hit
         for hit in hits:
+            explosion_sound.play()  # Play explosion sound
             score += 100  # Changed from 10 to 100 points per enemy destroyed
             # Create explosion
             explosion = Explosion(hit.rect.center, 30)
@@ -306,11 +326,12 @@ def main_game():
         # Check player-powerup collisions
         hits = pygame.sprite.spritecollide(player, powerups, True)
         for hit in hits:
+            powerup_sound.play()  # Play powerup sound
             if hit.type == 'shield':
                 player.shield += 20
                 if player.shield > 100:
                     player.shield = 100
-            if hit.type == 'power':
+            elif hit.type == 'power':  # Changed from 'if' to 'elif' for proper type handling
                 player.powerup()
         
         if game_over:

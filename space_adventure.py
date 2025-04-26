@@ -99,9 +99,13 @@ class Player(pygame.sprite.Sprite):
                 all_sprites.add(bullet)
                 bullets.add(bullet)
             elif self.power_level >= 2:
-                bullet1 = Bullet(self.rect.centerx, self.rect.top)
+                # Create two bullets side by side
+                bullet1 = Bullet(self.rect.centerx - 10, self.rect.top)  # Left bullet
+                bullet2 = Bullet(self.rect.centerx + 10, self.rect.top)  # Right bullet
                 all_sprites.add(bullet1)
+                all_sprites.add(bullet2)
                 bullets.add(bullet1)
+                bullets.add(bullet2)
 
     def hide(self):
         self.hidden = True

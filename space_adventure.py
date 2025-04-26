@@ -145,10 +145,10 @@ class Bullet(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.centerx = x
         self.rect.bottom = y
-        self.speedy = 1
+        self.speedy = 10  # Increased bullet speed from 1 to 10
 
     def update(self):
-        self.rect.y += self.speedy
+        self.rect.y -= self.speedy  # Changed += to -= so bullets move upward
         if self.rect.bottom < 0:
             self.kill()
 
@@ -267,9 +267,9 @@ def main_game():
         all_sprites.update()
         
         # Check bullet-enemy collisions
-        hits = pygame.sprite.groupcollide(enemies, bullets, False, True)
+        hits = pygame.sprite.groupcollide(enemies, bullets, True, True)  # Changed False to True so enemies are destroyed when hit
         for hit in hits:
-            score += 10
+            score += 100  # Changed from 10 to 100 points per enemy destroyed
             # Create explosion
             explosion = Explosion(hit.rect.center, 30)
             all_sprites.add(explosion)

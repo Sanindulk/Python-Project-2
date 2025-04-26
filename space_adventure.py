@@ -5,7 +5,6 @@ import os
 
 # Initialize pygame
 pygame.init()
-pygame.mixer.init()  # Initialize sound mixer
 
 # Screen dimensions
 SCREEN_WIDTH = 800
@@ -21,31 +20,42 @@ YELLOW = (255, 255, 0)
 
 # Asset loading function
 def load_image(name):
-    image_path = os.path.join('assets', 'images', name)
     try:
-        image = pygame.image.load(image_path).convert_alpha()
-        return image
-    except pygame.error as e:
-        print(f"Cannot load image: {image_path}")
-        print(e)
-        return pygame.Surface((30, 30))
-
-# Load sounds
-shoot_sound = pygame.mixer.Sound(os.path.join('assets', 'sounds', 'shoot.wav'))
-explosion_sound = pygame.mixer.Sound(os.path.join('assets', 'sounds', 'explosion.wav'))
-powerup_sound = pygame.mixer.Sound(os.path.join('assets', 'sounds', 'powerup.wav'))
-
-# Set sound volume
-shoot_sound.set_volume(0.4)
-explosion_sound.set_volume(0.6)
-powerup_sound.set_volume(0.7)
+        # First try to load from support directory
+        image_path = os.path.join('support', name)
+        if os.path.exists(image_path):
+            image = pygame.image.load(image_path).convert_alpha()
+            return image
+    except:
+        pass
+    
+    # If not found, create a default surface with a color based on the name
+    size = (30, 30)
+    surf = pygame.Surface(size)
+    if 'player' in name:
+        surf.fill(GREEN)
+    elif 'enemy' in name:
+        surf.fill(RED)
+    elif 'bullet' in name:
+        surf.fill(BLUE)
+    elif 'powerup' in name:
+        if 'shield' in name:
+            surf.fill(BLUE)
+        else:
+            surf.fill(YELLOW)
+    elif 'explosion' in name:
+        surf.fill(YELLOW)
+    else:
+        surf.fill(WHITE)
+    
+    return surf
 
 # Game settings
 FPS = 60
 
 # Create the screen
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Space Adventure - Debug Challenge")
+pygame.display.set_caption("Space Adventure")
 
 # Clock for controlling game speed
 clock = pygame.time.Clock()
@@ -93,9 +103,9 @@ class Player(pygame.sprite.Sprite):
         self.speed_x = 0
         keystate = pygame.key.get_pressed()
         if keystate[pygame.K_LEFT]:
-            self.speed_x = -8  # Changed from 8 to -8 for correct left movement
+            self.speed_x = -8
         if keystate[pygame.K_RIGHT]:
-            self.speed_x = 8   # Changed from -8 to 8 for correct right movement
+            self.speed_x = 8
 
         self.rect.x += self.speed_x
         # Fix boundary checking to keep the ship fully visible on screen
@@ -106,7 +116,6 @@ class Player(pygame.sprite.Sprite):
 
     def shoot(self):
         if not self.hidden:
-            shoot_sound.play()  # Play shoot sound
             if self.power_level == 1:
                 bullet = Bullet(self.rect.centerx, self.rect.top)
                 all_sprites.add(bullet)
@@ -148,13 +157,13 @@ class Enemy(pygame.sprite.Sprite):
             self.rect.x = random.randrange(0, SCREEN_WIDTH - self.rect.width)
             self.rect.y = random.randrange(-100, -40)
             self.speedy = random.randrange(1, 8)
-            self.speedx = random.randrange(-3, 3)  # Reset speedx when enemy goes off bottom
+            self.speedx = random.randrange(-3, 3)
 
         if self.rect.left < -25 or self.rect.right > SCREEN_WIDTH + 25:
             self.rect.x = random.randrange(0, SCREEN_WIDTH - self.rect.width)
             self.rect.y = random.randrange(-100, -40)
             self.speedy = random.randrange(1, 8)
-            self.speedx = random.randrange(-3, 3)  # Reset speedx when enemy goes off sides
+            self.speedx = random.randrange(-3, 3)
 
 # Bullet class
 class Bullet(pygame.sprite.Sprite):
@@ -164,10 +173,10 @@ class Bullet(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.centerx = x
         self.rect.bottom = y
-        self.speedy = 10  # Increased bullet speed from 1 to 10
+        self.speedy = 10
 
     def update(self):
-        self.rect.y -= self.speedy  # Changed += to -= so bullets move upward
+        self.rect.y -= self.speedy
         if self.rect.bottom < 0:
             self.kill()
 
@@ -195,7 +204,7 @@ class Explosion(pygame.sprite.Sprite):
         self.images = explosion_imgs
         self.image = self.images[0]
         # Scale the explosion images based on the size parameter
-        if size != 30:  # 30 is the default/normal size, don't scale if it's already that size
+        if size != 30:
             self.image = pygame.transform.scale(self.image, (size, size))
         self.rect = self.image.get_rect()
         self.rect.center = center
@@ -208,11 +217,11 @@ class Explosion(pygame.sprite.Sprite):
         if now - self.last_update > self.frame_rate:
             self.last_update = now
             self.frame += 1
-            if self.frame >= len(self.images):  # Use length of images list instead of hardcoded value
+            if self.frame >= len(self.images):
                 self.kill()
-            elif self.frame < len(self.images):  # Use length of images list
+            elif self.frame < len(self.images):
                 self.image = self.images[self.frame]
-                if self.size != 30:  # Scale only if not default size
+                if self.size != 30:
                     self.image = pygame.transform.scale(self.image, (self.size, self.size))
                 old_center = self.rect.center
                 self.rect = self.image.get_rect()
@@ -249,9 +258,8 @@ def draw_lives(surface, x, y, lives, img):
 # Function to draw power level indicator
 def draw_power_level(surface, x, y, power_level):
     if power_level <= 1:
-        return  # Don't show anything for normal power
+        return
     
-    # Draw power level indicator
     text = f"POWER: {power_level}"
     font = pygame.font.SysFont("arial", 18)
     text_surface = font.render(text, True, YELLOW)
@@ -260,13 +268,13 @@ def draw_power_level(surface, x, y, power_level):
     surface.blit(text_surface, text_rect)
     
     # Draw a pulsating glow effect around the ship when powered up
-    if int(pygame.time.get_ticks() / 200) % 2 == 0:  # Pulsating effect every 200ms
+    if int(pygame.time.get_ticks() / 200) % 2 == 0:
         return
     pygame.draw.circle(surface, YELLOW, player.rect.center, 30, 2)
 
 # Game loop
 def main_game():
-    global all_sprites, bullets, enemies, powerups
+    global all_sprites, bullets, enemies, powerups, player
     
     game_over = False
     running = True
@@ -278,6 +286,7 @@ def main_game():
     powerups = pygame.sprite.Group()
     
     # Create player
+    global player
     player = Player()
     all_sprites.add(player)
     
@@ -309,10 +318,9 @@ def main_game():
         all_sprites.update()
         
         # Check bullet-enemy collisions
-        hits = pygame.sprite.groupcollide(enemies, bullets, True, True)  # Changed False to True so enemies are destroyed when hit
+        hits = pygame.sprite.groupcollide(enemies, bullets, True, True)
         for hit in hits:
-            explosion_sound.play()  # Play explosion sound
-            score += 100  # Changed from 10 to 100 points per enemy destroyed
+            score += 100
             # Create explosion
             explosion = Explosion(hit.rect.center, 30)
             all_sprites.add(explosion)
@@ -336,7 +344,7 @@ def main_game():
             all_sprites.add(new_enemy)
             enemies.add(new_enemy)
             if player.shield <= 0:
-                player.lives -= 1  # Uncommented this line to reduce lives when shield is depleted
+                player.lives -= 1
                 player.shield = 100
                 player.hide()
                 if player.lives == 0:
@@ -345,12 +353,11 @@ def main_game():
         # Check player-powerup collisions
         hits = pygame.sprite.spritecollide(player, powerups, True)
         for hit in hits:
-            powerup_sound.play()  # Play powerup sound
             if hit.type == 'shield':
                 player.shield += 20
                 if player.shield > 100:
                     player.shield = 100
-            elif hit.type == 'power':  # Changed from 'if' to 'elif' for proper type handling
+            elif hit.type == 'power':
                 player.powerup()
         
         if game_over:
@@ -358,8 +365,8 @@ def main_game():
             draw_text(screen, "GAME OVER", 64, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
             pygame.display.flip()
             # Wait for a few seconds
-            pygame.time.delay(2000)  # Wait for 2 seconds
-            running = False  # Exit the game loop
+            pygame.time.delay(2000)
+            running = False
             
         # Draw / render
         screen.fill(BLACK)
@@ -373,8 +380,10 @@ def main_game():
         
         # Flip the display
         pygame.display.flip()
-    
-    pygame.quit()
+
+# Initialize global player variable
+player = None
 
 if __name__ == "__main__":
     main_game()
+    pygame.quit()

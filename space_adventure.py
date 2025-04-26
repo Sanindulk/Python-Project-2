@@ -98,10 +98,11 @@ class Player(pygame.sprite.Sprite):
             self.speed_x = 8   # Changed from -8 to 8 for correct right movement
 
         self.rect.x += self.speed_x
-        if self.rect.right > SCREEN_WIDTH + 20:
-            self.rect.right = SCREEN_WIDTH + 20
-        if self.rect.left < -20:
-            self.rect.left = -20
+        # Fix boundary checking to keep the ship fully visible on screen
+        if self.rect.right > SCREEN_WIDTH:
+            self.rect.right = SCREEN_WIDTH
+        if self.rect.left < 0:
+            self.rect.left = 0
 
     def shoot(self):
         if not self.hidden:
@@ -245,6 +246,24 @@ def draw_lives(surface, x, y, lives, img):
         img_rect.y = y
         surface.blit(img, img_rect)
 
+# Function to draw power level indicator
+def draw_power_level(surface, x, y, power_level):
+    if power_level <= 1:
+        return  # Don't show anything for normal power
+    
+    # Draw power level indicator
+    text = f"POWER: {power_level}"
+    font = pygame.font.SysFont("arial", 18)
+    text_surface = font.render(text, True, YELLOW)
+    text_rect = text_surface.get_rect()
+    text_rect.topleft = (x, y)
+    surface.blit(text_surface, text_rect)
+    
+    # Draw a pulsating glow effect around the ship when powered up
+    if int(pygame.time.get_ticks() / 200) % 2 == 0:  # Pulsating effect every 200ms
+        return
+    pygame.draw.circle(surface, YELLOW, player.rect.center, 30, 2)
+
 # Game loop
 def main_game():
     global all_sprites, bullets, enemies, powerups
@@ -350,6 +369,7 @@ def main_game():
         draw_text(screen, str(score), 18, SCREEN_WIDTH / 2, 10)
         draw_shield_bar(screen, 5, 5, player.shield)
         draw_lives(screen, SCREEN_WIDTH - 100, 5, player.lives, player_mini_img)
+        draw_power_level(screen, SCREEN_WIDTH - 200, 5, player.power_level)
         
         # Flip the display
         pygame.display.flip()

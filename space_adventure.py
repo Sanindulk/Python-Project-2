@@ -293,7 +293,7 @@ def main_game():
             all_sprites.add(new_enemy)
             enemies.add(new_enemy)
             if player.shield <= 0:
-                # player.lives -= 1
+                player.lives -= 1  # Uncommented this line to reduce lives when shield is depleted
                 player.shield = 100
                 player.hide()
                 if player.lives == 0:
@@ -310,7 +310,12 @@ def main_game():
                 player.powerup()
         
         if game_over:
-            pass
+            # Display Game Over message
+            draw_text(screen, "GAME OVER", 64, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+            pygame.display.flip()
+            # Wait for a few seconds
+            pygame.time.delay(2000)  # Wait for 2 seconds
+            running = False  # Exit the game loop
             
         # Draw / render
         screen.fill(BLACK)
